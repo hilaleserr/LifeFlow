@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from auth import get_password_hash, verify_password, create_access_token # Bizim yazdığımız fonksiyonlar
+from datetime import timedelta
 
 import models, schemas
 from database import SessionLocal, engine
@@ -64,3 +67,29 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     users = db.query(models.User).offset(skip).limit(limit).all()
     return users
+
+# --- LOGIN İŞLEMLERİ ---
+
+# Giriş yapıp Token alma kapısı
+@app.post("/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # 1. Kullanıcıyı email ile bul (OAuth2 formunda 'username' alanı email olarak kullanılır)
+    user = db.query(models.User).filter(models.User.Email == form_data.username).first()
+    
+    # 2. Kullanıcı yoksa veya şifre yanlışsa hata ver
+    if not user or not verify_password(form_data.password, user.PasswordHash):
+        raise HTTPException(
+            status_code=401,
+            detail="E-posta veya şifre hatalı",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 3. Her şey doğruysa Token üret
+    access_token_expires = timedelta(minutes=30)
+    access_token = create_access_token(
+        data={"sub": user.Email, "role": user.RoleID}, # Token içine Rol bilgisini de gömdük!
+        expires_delta=access_token_expires
+    )
+    
+    # 4. Token'ı kullanıcıya ver
+    return {"access_token": access_token, "token_type": "bearer"}
