@@ -3,17 +3,36 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import urllib
 
-# MSSQL Bağlantı Bilgileri
+# 1. SQL Server Ayarları (Senin ekran görüntüne göre ayarladım)
+# Server adı: HILAL\SQLEXPRESS
+# Veritabanı: BloodDonationDB
+SERVER_NAME = 'HILAL\\SQLEXPRESS' 
+DATABASE_NAME = 'BloodDonationDB'
+
+# 2. Bağlantı Cümlesi (Connection String)
+# Windows Authentication (Trusted_Connection=yes) kullanıyoruz, şifreye gerek yok.
 params = urllib.parse.quote_plus(
-    r'DRIVER={ODBC Driver 17 for SQL Server};'
-    r'SERVER=HILAL\SQLEXPRESS;'  # Senin sunucu adın
-    r'DATABASE=BloodDonationDB;' # Veritabanı adın
-    r'Trusted_Connection=yes;'   # Windows kimlik doğrulaması
+    f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+    f"SERVER={SERVER_NAME};"
+    f"DATABASE={DATABASE_NAME};"
+    f"Trusted_Connection=yes;"
 )
 
-SQLALCHEMY_DATABASE_URL = f"mssql+pyodbc:///?odbc_connect={params}"
+DATABASE_URL = f"mssql+pyodbc:///?odbc_connect={params}"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# 3. Motoru (Engine) Başlat
+engine = create_engine(DATABASE_URL)
+
+# 4. Oturum (Session) Oluşturucu
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# 5. Base Sınıfı (Modellerimiz bundan türeyecek)
 Base = declarative_base()
+
+# Bağlantıyı test etmek için küçük bir fonksiyon
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

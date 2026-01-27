@@ -1,31 +1,31 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional
 
-# Kullanıcı Kayıt Şeması
-class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
-    role_id: int
+# 1. Rol Şemaları (Veri alıp verirken kullanılacak kalıplar)
+class RoleBase(BaseModel):
+    RoleName: str
 
-# API Cevap Şeması
+class RoleCreate(RoleBase):
+    pass
+
+class Role(RoleBase):
+    RoleID: int
+    class Config:
+        from_attributes = True # ORM modunu açar (SQLAlchemy ile uyum için)
+
+# 2. Kullanıcı Oluşturma Şeması (Kayıt olurken istenecek bilgiler)
+class UserCreate(BaseModel):
+    FullName: str
+    Email: str
+    Password: str # Buraya dikkat: Kullanıcıdan 'Password' alırız...
+    RoleID: int = 2 # Varsayılan olarak 2 (Donor) olsun
+
+# 3. Kullanıcı Okuma Şeması (API cevap dönerken gösterilecek bilgiler)
 class UserOut(BaseModel):
-    id: int
-    email: EmailStr
-    role_id: int
+    UserID: int
+    FullName: str
+    Email: str
+    # DİKKAT: Password'ü burada döndürmüyoruz! Güvenlik kuralı.
+    
     class Config:
         from_attributes = True
-
-# Login Sonrası Verilecek Token Şeması
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-# EKSİK OLAN KISIM: Donör Profil Şeması
-class DonorProfileCreate(BaseModel):
-    blood_group: str
-
- 
-class BloodRequestCreate(BaseModel):
-    blood_group: str
-    urgency: bool # True: Acil, False: Normal
-    location: str
